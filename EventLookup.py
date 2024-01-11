@@ -58,7 +58,6 @@ def main():
     parser.add_argument('--double', action='store_true')
     parser.add_argument('--triple', action='store_true')
     parser.add_argument('--hr', action='store_true')
-    parser.add_argument('--rbi', action='store_true')
     parser.add_argument('--steal', action='store_true')
     parser.add_argument('--starHits', action='store_true')
     parser.add_argument('--startOfAB', action='store_true')
@@ -69,12 +68,27 @@ def main():
     parser.add_argument('--slidingCatch', action='store_true')
     parser.add_argument('--wallJump', action='store_true')
     parser.add_argument('--manualSelect', action='store_true')
+    parser.add_argument('--walkoff', action='store_true')
+
+    parser.add_argument('--firstFielderPos')
 
     parser.add_argument('--batter')
     parser.add_argument('--pitcher')
     parser.add_argument('--fielder')
+
+    parser.add_argument('--battingPlayer')
+    parser.add_argument('--pitchingPlayer')
     
-    parser.add_argument('--firstFielderPos')
+    parser.add_argument('--inning', type=int, nargs='+')
+    parser.add_argument('--chemOnBase', type=int, nargs='+')
+    parser.add_argument('--halfInning')
+    parser.add_argument('--outsInInning')
+    parser.add_argument('--balls', type=int, nargs='+')
+    parser.add_argument('--strikes', type=int, nargs='+')
+    parser.add_argument('--rbi', type=int, nargs='+')
+
+    parser.add_argument('--runnersOnBase', type=int, nargs='+')
+
 
     args = parser.parse_args()
 
@@ -100,7 +114,6 @@ def main():
                     'double': partial(myStats.hitEvents, numberOfBases=2),
                     'triple': partial(myStats.hitEvents, numberOfBases=3),
                     'hr': partial(myStats.hitEvents, numberOfBases=4),
-                    'rbi': myStats.rbiEvents,
                     'steal': myStats.stealEvents,
                     'starHits': myStats.starHitEvents,
                     'startOfAB': myStats.startOfAtBatEvents,
@@ -110,13 +123,24 @@ def main():
                     'fiveStarDinger': myStats.fiveStarDingerEvents,
                     'slidingCatch': myStats.slidingCatchEvents,
                     'wallJump': myStats.wallJumpEvents,
-                    'manualSelect': myStats.manualCharacterSelectionEvents
+                    'manualSelect': myStats.manualCharacterSelectionEvents,
+                    'walkoff': myStats.walkoffEvents
                     }
                 event_parameters = {
                     'firstFielderPos': myStats.positionFieldingEvents,
                     'batter': myStats.characterAtBatEvents,
                     'pitcher': myStats.characterPitchingEvents,
-                    'fielder': myStats.characterFieldingEvents
+                    'fielder': myStats.characterFieldingEvents,
+                    'inning': myStats.inningEvents,
+                    'halfInning': myStats.halfInningEvents,
+                    'runnersOnBase': myStats.runnerOnBaseEvents,
+                    'outsInInning': myStats.outsInInningEvents,
+                    'balls': myStats.ballEvents,
+                    'strikes': myStats.strikeEvents,
+                    'chemOnBase': myStats.chemOnBaseEvents,
+                    'rbi': myStats.rbiEvents,
+                    'battingPlayer': myStats.playerBattingEvents,
+                    'pitchingPlayer': myStats.playerPitchingEvents
                     }
                 
                 matchingEvents = set(range(myStats.eventFinal()+1))
@@ -133,7 +157,7 @@ def main():
                         event_summary.append(f'{arg}: {character}')
                         flaggedEvents = event_parameters[arg](character)
                         matchingEvents = matchingEvents.intersection(flaggedEvents)
-                    if arg == 'firstFielderPos':
+                    if arg in ['firstFielderPos', 'inning', 'halfInning', 'runnersOnBase', 'balls', 'strikes', 'chemOnBase', 'rbi', 'battingPlayer', 'pitchingPlayer']:
                         event_summary.append(f'{arg}: {input}')
                         flaggedEvents = event_parameters[arg](input)
                         matchingEvents = matchingEvents.intersection(flaggedEvents)

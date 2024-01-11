@@ -57,7 +57,13 @@ class StatObj:
                 'Double': set(),
                 'Triple': set(),
                 'HR': set(),
-                'RBI': set(),
+                'RBI': {
+                    0: set(),
+                    1: set(),
+                    2: set(),
+                    3: set(),
+                    4: set()
+                },
                 'Steal': set(),
                 'Star Hits': set(),
                 'First Pitch of AB': set(),
@@ -78,7 +84,40 @@ class StatObj:
                     "CF": set(),
                     "RF": set(),
                 },
-                'Manual Character Selection': set()
+                'Manual Character Selection': set(),
+                'Inning': {},
+                'Balls': {
+                    0: set(),
+                    1: set(),
+                    2: set(),
+                    3: set(),
+                },
+                'Strikes': {
+                    0: set(),
+                    1: set(),
+                    2: set()
+                },
+                'Half Inning': {
+                    0: set(),
+                    1: set()
+                },
+                'Chem On Base':{
+                    0: set(),
+                    1: set(),
+                    2: set(),
+                    3: set()
+                },
+                'Runner On Base': {
+                    0: set(),  # In this case 0 means no runners on base
+                    1: set(),
+                    2: set(),
+                    3: set()
+                },
+                'Outs In Inning':{
+                    0: set(),
+                    1: set(),
+                    2: set()
+                }
             }
 
             characterEvents = {}
@@ -86,31 +125,47 @@ class StatObj:
                 characterEvents[statJson["Character Game Stats"][character]['CharID']] = {'AtBat': set(),
                                                                                                   'Pitching': set(),
                                                                                                   'Fielding': set()}
+            for i in range(1, this.statJson['Innings Played']+1):
+                gameEvents['Inning'][i] = set()
 
             for event in this.statJson['Events']:
                 eventNum = event["Event Num"]
                 batting_team = event['Half Inning']
                 fielding_team = abs(event['Half Inning']-1)
+
                 batter = this.characterName(batting_team, event["Batter Roster Loc"])
                 pitcher = this.characterName(fielding_team, event["Pitcher Roster Loc"])
 
                 characterEvents[batter]['AtBat'].add(eventNum)
                 characterEvents[pitcher]['Pitching'].add(eventNum)
+                
+                gameEvents['Outs In Inning'][event['Outs']].add(eventNum)
+                gameEvents['Chem On Base'][event['Chemistry Links on Base']].add(eventNum)
+                gameEvents['Strikes'][event['Strikes']].add(eventNum)
+                gameEvents['Balls'][event['Balls']].add(eventNum)
+                gameEvents['Inning'][event['Inning']].add(eventNum)
+                gameEvents['RBI'][event['RBI']].add(eventNum)
+
+                gameEvents['Half Inning'][event['Half Inning']].add(eventNum)
 
                 if event["Result of AB"] in gameEvents.keys():
                     gameEvents[event["Result of AB"]].add(eventNum)
 
-                if event['RBI'] > 0:
-                    gameEvents['RBI'].add(eventNum)
-
-                runner_keys = ['Runner 1B', 'Runner 2B', 'Runner 3B']
-                for key in runner_keys:
-                    if key not in event.keys():
-                        continue
-                    if event[key]['Steal'] == 'None':
-                        continue
-                    gameEvents['Steal'].add(eventNum)
-                    break
+                runner_keys = {'Runner 1B': 1, 
+                               'Runner 2B': 2, 
+                               'Runner 3B': 3}
+                
+                no_runners = all(value not in event.keys() for value in runner_keys)
+                if no_runners:
+                    gameEvents['Runner On Base'][0].add(eventNum)
+                else:
+                    for key, storage_key in runner_keys.items(): 
+                        if key not in event.keys():
+                            continue
+                        gameEvents['Runner On Base'][storage_key].add(eventNum)
+                        if event[key]['Steal'] == 'None':
+                            continue
+                        gameEvents['Steal'].add(eventNum)
 
                 if 'Pitch' not in event.keys():
                     continue
@@ -190,10 +245,7 @@ class StatObj:
     def player(this, teamNum: int):
         # returns name of player
         # For Project Rio versions pre 1.9.2
-        # For Project Rio versions pre 1.9.2
         # teamNum: 0 == home team, 1 == away team
-        # For Project Rio versions 1.9.2 and later
-        # teamNum: 0 == away team, 1 == home team
         # For Project Rio versions 1.9.2 and later
         # teamNum: 0 == away team, 1 == home team
         VERSION_LIST_HOME_AWAY_FLIPPED = ["Pre 0.1.7", "0.1.7a", "0.1.8", "0.1.9", "1.9.1"]
@@ -967,7 +1019,6 @@ class StatObj:
 
     # TODO:aa
     # - add method for getting every stat from an event dict
-    # - add methods that go through each event
 
     def successfulBuntEvents(this):
         #returns a set of events of successful bunts
@@ -1021,10 +1072,6 @@ class StatObj:
         else:
             return this.gameEventsDict['Single'] | this.gameEventsDict['Double'] | this.gameEventsDict['Triple'] | this.gameEventsDict['HR']
     
-    def rbiEvents(this):
-        # returns a set of events where an RBI happened
-        return this.gameEventsDict['RBI']
-    
     def stealEvents(this):
         # returns a set of events where an steal happened
         # types of steals: None, Ready, Normal, Perfect
@@ -1076,6 +1123,126 @@ class StatObj:
         # returns a set of events where a fielder was manually selected
         return this.gameEventsDict['Manual Character Selection']
     
+    def runnerOnBaseEvents(this, baseNums: list):
+        # returns a set of events where runners were on the specified bases
+        # the input baseNums is a list of three numbers -3 to 3
+        # the numbers indicate what base the runner is to appear on
+        # if the base number is positive, then the returned events will all have a runner
+        # on that base.
+        # if the base number is negative, then the returned events will not care whether a runner
+        # appears on that base or not
+        # if the base number is not provided, then the returned events will not have a runner 
+        # on that base.
+        # examples: baseNums = [1,2] will return events that had runners only on both 1st and 2nd base
+        # baseNums = [1,2, -3] will return events that had runners on both 1st or 2nd whether or not a runner is on 3rd
+        # baseNums = [-1, -2, -3] will return events any time any runners are on any base
+        # baseNums = [-1, -2, 0] will return events with no runners, or runners on first or second, but none that have runners on 3rd 
+
+        for num in baseNums:
+            this.__errorCheck_baseNum(num)
+        
+        if len(baseNums) > 3:
+            raise Exception('Too many baseNums provided. runnerOnBaseEvents accepts at most 3 bases')
+
+        if baseNums == [0]:
+            return this.gameEventsDict['Runner On Base']['None']
+
+        runner_on_base = this.gameEventsDict['Runner On Base']
+
+        exclude_bases = [1,2,3]
+        required_bases = []
+        optional_bases = []
+        for i in baseNums:
+            if abs(i) in exclude_bases:
+                exclude_bases.remove(abs(i))
+            if i > 0:
+                required_bases.append(i)
+            else:
+                optional_bases.append(abs(i))
+
+        if required_bases and (0 in optional_bases):
+            raise Exception(f'The argument 0 may only be provided alongside optional arguments or itself')
+
+        if required_bases:
+            print('required_bases')
+            result = set(range(this.eventFinal()+1))
+            for base in required_bases:
+                result.intersection_update(runner_on_base[base])
+        else:
+            result = set()
+
+        if not result:
+            for base in optional_bases:
+                result = result.union(runner_on_base[base])
+
+        if exclude_bases:
+            for base in exclude_bases:
+                result.difference_update(runner_on_base[base])
+
+        return result
+
+    def listInputHandling(this, inputList, key):
+        result = set()
+        for i in inputList:
+            if abs(i) not in this.gameEventsDict[key].keys():
+                continue
+            if i >= 0:
+                result = result.union(this.gameEventsDict[key][i])
+            else:
+                for j in range(abs(i), max(this.gameEventsDict[key].keys())+1):
+                    result = result.union(this.gameEventsDict[key][j])
+                       
+        return result
+
+    def inningEvents(this, inningNum):
+        inningNumList = inningNum if isinstance(inningNum, (list, set)) else [inningNum]
+        # returns a set of events that occurered in the inning input
+        # negative inputs return all events after the specified inning
+        return this.listInputHandling(inningNumList, 'Inning')
+    
+    def ballEvents(this, ballNum):
+        # returns a set of events that occurered with the number of balls in the count
+        # negative inputs return all events with a ball count greater than or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        ballNumList = ballNum if isinstance(ballNum, (list, set)) else [ballNum]
+        return this.listInputHandling(ballNumList, 'Balls')
+    
+    def strikeEvents(this, strikeNum):
+        # returns a set of events that occurered with the number of strikes in the count
+        # negative inputs return all events with a strike count greater than or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        strikeNumList = strikeNum if isinstance(strikeNum, (list, set)) else [strikeNum]
+        return this.listInputHandling(strikeNumList, 'Strikes')
+
+    def chemOnBaseEvents(this, chemNum):
+        # returns a set of events that occurered with the number of chem on base
+        # negative inputs return all events with a chem count greater than or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        chemNumList = chemNum if isinstance(chemNum, (list, set)) else [chemNum]
+        return this.listInputHandling(chemNumList, 'Chem On Base')
+        
+    def rbiEvents(this, rbiNum):
+        # returns a set of events that occurered with the number of chem on base
+        # negative inputs return all events with a chem count greater than or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        rbiNumList = rbiNum if isinstance(rbiNum, (list, set)) else [rbiNum]
+        return this.listInputHandling(rbiNumList, 'RBI')
+        
+
+    def halfInningEvents(this, halfInningNum: int):
+          this.__errorCheck_halfInningNum(halfInningNum)
+          return this.gameEventsDict['Half Inning'][halfInningNum]
+    
+    def outsInInningEvents(this, outsNum: int):
+        this.__errorCheck_halfInningNum(outsNum)
+        if outsNum >= 0:
+            return this.gameEventsDict['Outs In Inning'][outsNum]
+        else:
+            result = set()
+            for i in range(abs(outsNum), 3):
+                result = result.union(this.gameEventsDict['Outs In Inning'][i])
+            return result
+
     def characterAtBatEvents(this, char_id):
         # returns a set of events where the input character was at bat
         # returns an empty set if the character was not in the game
@@ -1106,6 +1273,28 @@ class StatObj:
         this.__errorCheck_fielder_pos(fielderPos)
         return this.gameEventsDict['First Fielder Position'][fielderPos.upper()]
     
+    def walkoffEvents(this):
+        # returns a set of events of game walkoffs
+        if this.rbiOfEvent(this.eventFinal()) != 0:
+            return set([this.eventFinal()])
+        return set()
+    
+    def playerBattingEvents(this, playerBatting):
+        if playerBatting.lower() == this.player(0).lower():
+            return this.halfInningEvents(0)
+        elif playerBatting.lower() == this.player(1).lower():
+            return this.halfInningEvents(1)
+        else:
+            return set()
+        
+    def playerPitchingEvents(this, playerPitching):
+        if playerPitching.lower() == this.player(0).lower():
+            return this.halfInningEvents(1)
+        elif playerPitching.lower() == this.player(1).lower():
+            return this.halfInningEvents(0)
+        else:
+            return set()
+
     def inningOfEvent(this, eventNum):
         # returns the ininng from a specified event
         this.__errorCheck_eventNum(eventNum)
@@ -1114,28 +1303,28 @@ class StatObj:
     
     def halfInningOfEvent(this, eventNum):
         # returns the half ininng from a specified event
-        this.__errorCheck_eventNum(eventNum)
-        eventList = this.events()
-        return eventList[eventNum]["Half Inning"]
+        return this.eventByNum(eventNum)["Half Inning"]
     
     def strikesOfEvent(this, eventNum):
         # returns the strikes from a specified event
-        this.__errorCheck_eventNum(eventNum)
-        eventList = this.events()
-        return eventList[eventNum]["Strikes"]
+        return this.eventByNum(eventNum)["Strikes"]
     
     def ballsOfEvent(this, eventNum):
         # returns the ininng from a specified event
-        this.__errorCheck_eventNum(eventNum)
-        eventList = this.events()
-        return eventList[eventNum]["Balls"]
+        return this.eventByNum(eventNum)["Balls"]
     
     def outsOfEvent(this, eventNum):
         # returns the ininng from a specified event
-        this.__errorCheck_eventNum(eventNum)
-        eventList = this.events()
-        return eventList[eventNum]["Outs"]
+        return this.eventByNum(eventNum)["Outs"]
     
+    def runnersOfEvent(this, eventNum):
+        # returns the ininng from a specified event
+        return set(this.eventByNum(eventNum).keys()).intersection(['Runner 1B', 'Runner 2B', 'Runner 3B'])
+    
+    def rbiOfEvent(this, eventNum):
+        # returns the rbi from a specified event
+        return this.eventByNum(eventNum)['RBI']
+
     # manual exception handling stuff
     def __errorCheck_teamNum(this, teamNum: int):
         # tells if the teamNum is invalid
@@ -1146,12 +1335,12 @@ class StatObj:
     def __errorCheck_rosterNum(this, rosterNum: int):
         # tells if rosterNum is invalid. allows -1 arg
         if rosterNum < -1 or rosterNum > 8:
-            raise Exception(f'Invalid roster arg {rosterNum}. Function only accepts roster args of from 0 to 8.')
+            raise Exception(f'Invalid roster arg {rosterNum}. Function only accepts roster args of 0 to 8.')
 
     def __errorCheck_rosterNum2(this, rosterNum: int):
         # tells if rosterNum is invalid. does not allow -1 arg
         if rosterNum < 0 or rosterNum > 8:
-            raise Exception(f'Invalid roster arg {rosterNum}. Function only accepts roster args of from 0 to 8.')
+            raise Exception(f'Invalid roster arg {rosterNum}. Function only accepts roster args of 0 to 8.')
 
     def __errorCheck_eventNum(this, eventNum: int):
         # tells if eventNum is outside of events in the game
@@ -1159,81 +1348,108 @@ class StatObj:
             raise Exception(f'Invalid event num {eventNum}. Event num is outside of events in this game')
 
     def __errorCheck_fielder_pos(this, fielderPos):
+        # tells if fielderPos is valid
          if fielderPos.upper() not in ['P','C','1B','2B','3B','SS','LF','CF','RF']:
             raise Exception(f"Invalid fielder position {fielderPos}. Function accepts {['p','c','1b','2b','3b','ss','lf','cf','rf']}")
 
+    def __errorCheck_baseNum(this, baseNum: int):
+         # tells if baseNum is valid representing 1st, 2nd and 3rd base
+        if abs(baseNum) not in [0,1,2,3]:
+            raise Exception(f'Invalid base num {baseNum}. Function only accepts base numbers of -3 to 3.')
+
+    def __errorCheck_halfInningNum(this, halfInningNum: int):
+        if halfInningNum not in [0,1]:
+            raise Exception(f'Invalid Half Inning num {halfInningNum}. Function only accepts base numbers of 0 or 1.')
+
     '''
-    {
-      "Event Num": 0,d
-      "Inning": 1,
-      "Half Inning": 0,
+    "Event Num": 50,
+      "Inning": 3,
+      "Half Inning": 1,
       "Away Score": 0,
-      "Home Score": 0,
+      "Home Score": 1,
       "Balls": 0,
-      "Strikes": 0,
-      "Outs": 0,
+      "Strikes": 1,
+      "Outs": 1,
       "Star Chance": 0,
-      "Away Stars": 4,
-      "Home Stars": 3,
+      "Away Stars": 0,
+      "Home Stars": 0,
+      "Pitcher Stamina": 9,
       "Chemistry Links on Base": 0,
-      "Pitcher Roster Loc": 2,
-      "Batter Roster Loc": 0,
+      "Pitcher Roster Loc": 8,
+      "Batter Roster Loc": 2,
+      "Catcher Roster Loc": 4,
       "RBI": 0,
-      "Result of AB": "Out",
+      "Num Outs During Play": 0,
+      "Result of AB": "None",
       "Runner Batter": {
-        "Runner Roster Loc": 0,
-        "Runner Char Id": "Paragoomba",
+        "Runner Roster Loc": 2,
+        "Runner Char Id": "Waluigi",
         "Runner Initial Base": 0,
-        "Out Type": "Tag",
+        "Out Type": "None",
         "Out Location": 0,
         "Steal": "None",
-        "Runner Result Base": 255
+        "Runner Result Base": 0
+      },
+      "Runner 1B": {
+        "Runner Roster Loc": 1,
+        "Runner Char Id": "Luigi",
+        "Runner Initial Base": 1,
+        "Out Type": "None",
+        "Out Location": 0,
+        "Steal": "None",
+        "Runner Result Base": 1
+      },
+      "Runner 2B": {
+        "Runner Roster Loc": 0,
+        "Runner Char Id": "Baby Mario",
+        "Runner Initial Base": 2,
+        "Out Type": "None",
+        "Out Location": 0,
+        "Steal": "None",
+        "Runner Result Base": 2
       },
       "Pitch": {
         "Pitcher Team Id": 0,
-        "Pitcher Char Id": "Mario",
-        "Pitch Type": "Curve",
-        "Charge Type": "N/A",
+        "Pitcher Char Id": "Dixie",
+        "Pitch Type": "Charge",
+        "Charge Type": "Slider",
         "Star Pitch": 0,
-        "Pitch Speed": 130,
-        "DB": 1,
-        "Pitch Result": "Contact",
+        "Pitch Speed": 162,
+        "Ball Position - Strikezone": -0.260153,
+        "In Strikezone": 1,
+        "Bat Contact Pos - X": -0.134028,
+        "Bat Contact Pos - Z": 1.5,
+        "DB": 0,
+        "Type of Swing": "Slap",
         "Contact": {
-          "Type of Swing": "6",
-          "Type of Contact": "Perfect",
+          "Type of Contact":"Nice - Right",
           "Charge Power Up": 0,
           "Charge Power Down": 0,
           "Star Swing Five-Star": 0,
-          "Input Direction": "None",
-          "Frame Of Swing Upon Contact": 0,
-          "Ball Angle": "571",
-          "Ball Vertical Power": "27",
-          "Ball Horizontal Power": "31",
-          "Ball Velocity - X": 0.0991619,
-          "Ball Velocity - Y": 0.00641787,
-          "Ball Velocity - Z": 0.118957,
-          "Ball Landing Position - X": 2.85452,
-          "Ball Landing Position - Y": 0.185372,
-          "Ball Landing Position - Z": 3.82766,
-          "Ball Position Upon Contact - X": -2.3,
-          "Ball Position Upon Contact - Z": -0.6,
-          "Batter Position Upon Contact - X": 0,
-          "Batter Position Upon Contact - Z": 0,
-          "Multi-out": 0,
-          "Contact Result - Primary": "Fair",
-          "Contact Result - Secondary": "foul",
-          "First Fielder": {
-            "Fielder Roster Location": 4,
-            "Fielder Position": "1B",
-            "Fielder Character": "Koopa(G)",
-            "Fielder Action": "Unable to Decode. Invalid Value (247).",
-            "Fielder Swap": 188,
-            "Fielder Position - X": 7.9392,
-            "Fielder Position - Y": 9.73028,
-            "Fielder Position - Z": -0,
-            "Fielder Bobble": "None"
-          }
+          "Input Direction - Push/Pull": "Towards Batter",
+          "Input Direction - Stick": "Right",
+          "Frame of Swing Upon Contact": "2",
+          "Ball Power": "139",
+          "Vert Angle": "158",
+          "Horiz Angle": "1,722",
+          "Contact Absolute": 109.703,
+          "Contact Quality": 0.988479,
+          "RNG1": "4,552",
+          "RNG2": "5,350",
+          "RNG3": "183",
+          "Ball Velocity - X": -0.592068,
+          "Ball Velocity - Y": 0.166802,
+          "Ball Velocity - Z": 0.323508,
+          "Ball Contact Pos - X": -0.216502,
+          "Ball Contact Pos - Z": 1.5,
+          "Ball Landing Position - X": -45.4675,
+          "Ball Landing Position - Y": 0.176705,
+          "Ball Landing Position - Z": 17.4371,
+          "Ball Max Height": 4.23982,
+          "Ball Hang Time": "89",
+          "Contact Result - Primary": "Foul",
+          "Contact Result - Secondary": "Foul"
         }
       }
-    }
+    },
     '''
