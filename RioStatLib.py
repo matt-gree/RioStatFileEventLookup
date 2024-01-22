@@ -45,18 +45,25 @@ class StatObj:
         # and finds events with specific plays 
         def eventsFilter():
             gameEvents = {
-                'Bunt': set(),
-                'SacFly': set(),
-                'Strikeout': set(),
-                'Ground Ball Double Play': set(),
-                'Error - Chem': set(),
-                'Error - Input': set(),
-                'Walk HBP': set(),
-                'Walk BB': set(),
-                'Single': set(),
-                'Double': set(),
-                'Triple': set(),
-                'HR': set(),
+                'Result of AB': {
+                    'None': set(),
+                    'Strikeout': set(),
+                    'Walk (BB)': set(),
+                    'Walk (HBP)': set(),
+                    'Out': set(),
+                    'Caught': set(),
+                    'Caught line-drive': set(),
+                    'Single': set(),
+                    'Double': set(),
+                    'Triple': set(),
+                    'HR': set(),
+                    'Error - Input': set(),
+                    'Error - Chem': set(),
+                    'Bunt': set(),
+                    'SacFly': set(),
+                    'Ground ball double Play': set(),
+                    'Foul catch': set()
+                },
                 'RBI': {
                     0: set(),
                     1: set(),
@@ -65,8 +72,6 @@ class StatObj:
                     4: set()
                 },
                 'Steal': set(),
-                'Star Hits': set(),
-                'First Pitch of AB': set(),
                 'Full Count Pitch': set(),
                 'Star Pitch': set(),
                 'Bobble': set(),
@@ -117,6 +122,85 @@ class StatObj:
                     0: set(),
                     1: set(),
                     2: set()
+                },
+                'Pitcher Stamina': {
+                    10: set(),
+                    9: set(),
+                    8: set(),
+                    7: set(),
+                    6: set(),
+                    5: set(),
+                    4: set(),
+                    3: set(),
+                    2: set(),
+                    1: set(),
+                    0: set()
+                },
+                'Star Chance': {
+                    0: set(),
+                    1: set()
+                },
+                'Outs During Event': {
+                    0: set(),
+                    1: set(),
+                    2: set(),
+                    3: set(),
+                },
+                'Pitch Type': {
+                    "Curve": set(),
+                    "Charge": set(),
+                    "ChangeUp": set()
+                },
+                'Charge Type': {
+                    "N/A": set(),
+                    'Unable to Decode. Invalid Value (1).': set(),
+                    "Slider": set(),
+                    "Perfect": set()
+                },
+                'In Strikezone': {
+                    0: set(),
+                    1: set()
+                },
+                'Type Of Swing': {
+                    "None": set(),
+                    "Slap": set(),
+                    "Charge": set(),
+                    "Star": set(),
+                    "Bunt": set()
+                },
+                'Type Of Contact': {
+                    "Sour - Left": set(),
+                    "Nice - Left": set(),
+                    "Perfect": set(),
+                    "Nice - Right": set(),
+                    "Sour - Right": set()
+                },
+                'Input Direction': {
+                    "": set(),
+                    "Left": set(),
+                    "Right": set(),
+                    "Down": set(),
+                    "Left+Down": set(),
+                    "Right+Down": set(),
+                    "Up": set(),
+                    "Left+Up": set(),
+                    "Right+Up": set(),
+                    'Left+Right': set(),
+                    "Left+Right+Down": set(),
+                    "Right+Down+Up": set()
+                    
+                },
+                'Contact Frame': {
+                    0: set(),
+                    2: set(),
+                    3: set(),
+                    4: set(),
+                    5: set(),
+                    6: set(),
+                    7: set(),
+                    8: set(),
+                    9: set(),
+                    10: set()
                 }
             }
 
@@ -145,11 +229,12 @@ class StatObj:
                 gameEvents['Balls'][event['Balls']].add(eventNum)
                 gameEvents['Inning'][event['Inning']].add(eventNum)
                 gameEvents['RBI'][event['RBI']].add(eventNum)
+                gameEvents['Pitcher Stamina'][event['Pitcher Stamina']].add(eventNum)
+                gameEvents['Star Chance'][event['Star Chance']].add(eventNum)
+                gameEvents['Outs During Event'][event['Num Outs During Play']].add(eventNum)
 
                 gameEvents['Half Inning'][event['Half Inning']].add(eventNum)
-
-                if event["Result of AB"] in gameEvents.keys():
-                    gameEvents[event["Result of AB"]].add(eventNum)
+                gameEvents['Result of AB'][event["Result of AB"]].add(eventNum)
 
                 runner_keys = {'Runner 1B': 1, 
                                'Runner 2B': 2, 
@@ -170,13 +255,10 @@ class StatObj:
                 if 'Pitch' not in event.keys():
                     continue
 
-                if ((event["Result of AB"] in ['Single', 'Double', 'Triple', 'HR'])
-                & ('Contact' in event['Pitch'].keys())
-                & (event['Pitch']['Type of Swing'] == 'Star')):
-                    gameEvents['Star Hits'].add(eventNum)
-
-                if (event['Balls'] == 0) & (event['Strikes'] == 0):
-                    gameEvents['First Pitch of AB'].add(eventNum)
+                gameEvents['Pitch Type'][event['Pitch']['Pitch Type']].add(eventNum)
+                gameEvents['Charge Type'][event['Pitch']['Charge Type']].add(eventNum)
+                gameEvents['In Strikezone'][event['Pitch']['In Strikezone']].add(eventNum)
+                gameEvents['Type Of Swing'][event['Pitch']['Type of Swing']].add(eventNum)
 
                 if (event['Balls'] == 3) & (event['Strikes'] == 2):
                     gameEvents['Full Count Pitch'].add(eventNum)
@@ -186,6 +268,10 @@ class StatObj:
 
                 if 'Contact' not in event['Pitch'].keys():
                     continue
+
+                gameEvents['Type Of Contact'][event['Pitch']['Contact']['Type of Contact']].add(eventNum)
+                gameEvents['Input Direction'][event['Pitch']['Contact']['Input Direction - Stick']].add(eventNum)
+                gameEvents['Contact Frame'][int(event['Pitch']['Contact']['Frame of Swing Upon Contact'])].add(eventNum)
 
                 if event['Pitch']['Contact']["Star Swing Five-Star"] == 1:
                     gameEvents['Five Star Dinger'].add(eventNum)
@@ -250,20 +336,20 @@ class StatObj:
         # teamNum: 0 == away team, 1 == home team
         VERSION_LIST_HOME_AWAY_FLIPPED = ["Pre 0.1.7", "0.1.7a", "0.1.8", "0.1.9", "1.9.1"]
 
+        this.__errorCheck_teamNum(teamNum)
+
         if this.version() in VERSION_LIST_HOME_AWAY_FLIPPED:
             if teamNum == 0:
                 return this.statJson["Home Player"]
-            elif teamNum == 1:
-                return this.statJson["Away Player"]
             else:
-                this.__errorCheck_teamNum(teamNum)
+                return this.statJson["Away Player"]
+                
 
         if teamNum == 0:
             return this.statJson["Away Player"]
-        elif teamNum == 1:
-            return this.statJson["Home Player"]
         else:
-            this.__errorCheck_teamNum(teamNum)
+            return this.statJson["Home Player"]
+
 
 
     def score(this, teamNum: int):
@@ -1020,74 +1106,82 @@ class StatObj:
     # TODO:aa
     # - add method for getting every stat from an event dict
 
-    def successfulBuntEvents(this):
-        #returns a set of events of successful bunts
-        return this.gameEventsDict['Bunt']
+    def noneResultEvents(this):
+        # returns a set of events who's result is none
+        return this.gameEventsDict['Result of AB']['None']
     
-    def sacFlyEvents(this):
-        #returns a set of events of sac flys
-        return this.gameEventsDict['SacFly']
-    
-    def strikeoutEvents(this):
+    def strikeoutResultEvents(this):
         # returns a set of events where the result is a strikeout
-        return this.gameEventsDict['Strikeout']
+        return this.gameEventsDict['Result of AB']['Strikeout']
     
-    def groundBallDoublePlayEvents(this):
-        # returns a set of events where the result is a ground ball double play
-        return this.gameEventsDict['Ground Ball Double Play']
-    
-    def chemErrorEvents(this):
-        # returns a set of events where the result is a chem error
-        return this.gameEventsDict['Error - Chem']
-    
-    def inputErrorEvents(this):
-        # returns a set of events where the result is a input error
-        return this.gameEventsDict['Error - Input']
-    
-    def walkEvents(this, include_hbp=True, include_bb=True):
+    def walkResultEvents(this, include_hbp=True, include_bb=True):
         # returns a set of events where the batter recorded a type of hit
         # can be used to reutrn just walks or just hbp
         # defaults to returning both
         if include_hbp & include_bb:
-            return this.gameEventsDict['Walk HBP'] | this.resultOfAtBatEvents['Walk BB']
+            return this.gameEventsDict['Result of AB']['Walk (HBP)'] | this.resultOfAtBatEvents['Result of AB']['Walk (BB)']
         if include_hbp:
-            return this.gameEventsDict['Walk HBP']
+            return this.gameEventsDict['Result of AB']['Walk (HBP)']
         if include_bb:
-            return this.gameEventsDict['Walk BB']
+            return this.gameEventsDict['Result of AB']['Walk (BB)']
         else:
             return set()
+        
+    def outResultEvents(this):
+        # returns a set of events where the result is out
+        return this.gameEventsDict['Result of AB']['Out']
 
-    def hitEvents(this, numberOfBases=0):
+    def caughtResultEvents(this):
+        # returns a set of events where the result is caught
+        return this.gameEventsDict['Result of AB']['Caught']
+    
+    def caughtLineDriveResultsEvents(this):
+        # returns a set of events where the result is caught line drive
+        return this.gameEventsDict['Result of AB']['Caught line-drive']
+
+    def hitResultEvents(this, numberOfBases=0):
         # returns a set of events where the batter recorded a type of hit
         # can return singles, doubles, triples, HRs or all hits
         # returns all hits if numberOfBases is not 1-4
         if numberOfBases == 1:
-            return this.gameEventsDict['Single']
+            return this.gameEventsDict['Result of AB']['Single']
         elif numberOfBases == 2:
-            return this.gameEventsDict['Double']
+            return this.gameEventsDict['Result of AB']['Double']
         elif numberOfBases == 3:
-            return this.gameEventsDict['Triple']
+            return this.gameEventsDict['Result of AB']['Triple']
         elif numberOfBases == 4:
-            return this.gameEventsDict['HR']
+            return this.gameEventsDict['Result of AB']['HR']
         else:
-            return this.gameEventsDict['Single'] | this.gameEventsDict['Double'] | this.gameEventsDict['Triple'] | this.gameEventsDict['HR']
+            return this.gameEventsDict['Result of AB']['Single'] | this.gameEventsDict['Result of AB']['Double'] | this.gameEventsDict['Result of AB']['Triple'] | this.gameEventsDict['Result of AB']['HR']
+
+    def inputErrorResultEvents(this):
+        # returns a set of events where the result is a input error
+        return this.gameEventsDict['Result of AB']['Error - Input']
     
+    def chemErrorResultEvents(this):
+        # returns a set of events where the result is a chem error
+        return this.gameEventsDict['Result of AB']['Error - Chem']
+
+    def buntResultEvents(this):
+        #returns a set of events of successful bunts
+        return this.gameEventsDict['Result of AB']['Bunt']
+    
+    def sacFlyResultEvents(this):
+        #returns a set of events of sac flys
+        return this.gameEventsDict['Result of AB']['SacFly']
+    
+    def groundBallDoublePlayResultEvents(this):
+        # returns a set of events where the result is a ground ball double play
+        return this.gameEventsDict['Result of AB']['Ground ball double Play']
+    
+    def foulCatchResultEvents(this):
+        # returns a set of events where the result is a foul catch
+        return this.gameEventsDict['Result of AB']['Foul Catch']
+
     def stealEvents(this):
         # returns a set of events where an steal happened
         # types of steals: None, Ready, Normal, Perfect
         return this.gameEventsDict['Steal']
-    
-    def starHitEvents(this):
-        # returns a set of events where a star hit lands for a hit
-        return this.gameEventsDict['Star Hit']
-    
-    def startOfAtBatEvents(this):
-        # returns a set of events for the first pitch of an AB
-        return this.gameEventsDict['First Pitch of AB']
-    
-    def fullCountPitchEvents(this):
-        # returns a set of events for the first pitch of an AB
-        return this.gameEventsDict['Full Count Pitch']
     
     def starPitchEvents(this):
         # returns a set of events where a star pitch is used
@@ -1181,7 +1275,7 @@ class StatObj:
 
         return result
 
-    def listInputHandling(this, inputList, key):
+    def listInputHandling(this, inputList, key, to_zero=False):
         result = set()
         for i in inputList:
             if abs(i) not in this.gameEventsDict[key].keys():
@@ -1189,9 +1283,13 @@ class StatObj:
             if i >= 0:
                 result = result.union(this.gameEventsDict[key][i])
             else:
-                for j in range(abs(i), max(this.gameEventsDict[key].keys())+1):
-                    result = result.union(this.gameEventsDict[key][j])
-                       
+                if to_zero:
+                    for j in range(0, abs(i)):
+                        result = result.union(this.gameEventsDict[key][j])
+                else:
+                    for j in range(abs(i), max(this.gameEventsDict[key].keys())+1):
+                        result = result.union(this.gameEventsDict[key][j])
+                     
         return result
 
     def inningEvents(this, inningNum):
@@ -1242,6 +1340,124 @@ class StatObj:
             for i in range(abs(outsNum), 3):
                 result = result.union(this.gameEventsDict['Outs In Inning'][i])
             return result
+        
+    def pitcherStaminaEvents(this, stamina):
+        # returns a set of events that occurered with the number of pitcher stamina
+        # negative inputs return all events with a stamina LESS THAN or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        staminaList = stamina if isinstance(stamina, (list, set)) else [stamina]
+        return this.listInputHandling(staminaList, 'Pitcher Stamina', to_zero=True)
+
+    def starChanceEvents(this, isStarChance=True):
+        if isStarChance:
+            return this.gameEventsDict['Star Chance'][1]
+        return this.gameEventsDict['Star Chance'][0]
+
+    def numOutsDuringPlayEvents(this, numOuts):
+         numOutsList = numOuts if isinstance(numOuts, (list, set)) else [numOuts]
+         return this.listInputHandling(numOutsList, 'Outs During Event')
+
+    def curvePitchTypeEvents(this):
+        return this.gameEventsDict['Pitch Type']['Curve']
+    
+    def chargePitchTypeEvents(this):
+        return this.gameEventsDict['Pitch Type']['Charge']
+
+    def sliderPitchTypeEvents(this):
+        return this.gameEventsDict['Charge Type']['Slider']
+
+    def perfectChargePitchTypeEvents(this):
+        return this.gameEventsDict['Charge Type']['Perfect']
+
+    def changeUpPitchTypeEvents(this):
+        return this.gameEventsDict['Pitch Type']['ChangeUp']
+    
+    def pitchTypeEvents(this, pitchType):
+        pitchTypeList = pitchType if isinstance(pitchType, (list, set)) else [pitchType]
+        
+        result = set()
+        for pitch in pitchTypeList:
+            if pitch.lower() == 'curve':
+                result = result.union(this.curvePitchTypeEvents())
+            elif pitch.lower() == 'charge':
+                result = result.union(this.chargePitchTypeEvents())
+            elif pitch.lower() == 'slider':
+                result = result.union(this.sliderPitchTypeEvents())
+            elif pitch.lower() == 'perfect':
+                result = result.union(this.perfectChargePitchTypeEvents())
+            elif pitch.lower() == 'changeup':
+                result = result.union(this.changeUpPitchTypeEvents())
+            else:
+                raise Exception(f'{pitch} is not a valid pitch type. Curve, Charge, Slider, Perfect, and ChangeUp are accepted.')
+        
+        return result
+
+    def inStrikezoneEvents(this):
+        return this.gameEventsDict['In Strikezone'][1]
+
+    def noneSwingTypeEvents(this):
+        return this.gameEventsDict['Type Of Swing']['None']
+
+    def slapSwingTypeEvents(this):
+        return this.gameEventsDict['Type Of Swing']['Slap']
+
+    def chargeSwingTypeEvents(this):
+        return this.gameEventsDict['Type Of Swing']['Charge']
+
+    def starSwingTypeEvents(this):
+        return this.gameEventsDict['Type Of Swing']['Star']
+
+    def buntSwingTypeEvents(this):
+        return this.gameEventsDict['Type Of Swing']['Bunt']
+    
+    def swingTypeEvents(this, swingType):
+        swingTypeList = swingType if isinstance(swingType, (list, set)) else [swingType]
+        
+        result = set()
+        for swing in swingTypeList:
+            if swing.lower() == 'none':
+                result = result.union(this.noneSwingTypeEvents())
+            elif swing.lower() == 'slap':
+                result = result.union(this.slapSwingTypeEvents())
+            elif swing.lower() == 'charge':
+                result = result.union(this.chargeSwingTypeEvents())
+            elif swing.lower() == 'star':
+                result = result.union(this.starSwingTypeEvents())
+            elif swing.lower() == 'bunt':
+                result = result.union(this.buntSwingTypeEvents())
+            else:
+                raise Exception(f'{swing} is not a valid pitch type. None, Slap, Charge, Star, and Bunt are accepted.')
+        
+        return result
+    
+    def niceContactTypeEvents(this, side='b'):
+        if side == 'b':
+            return this.gameEventsDict['Type Of Contact']['Nice - Left'] | this.gameEventsDict['Type Of Contact']['Nice - Right']
+        if side == 'l':
+            return this.gameEventsDict['Type Of Contact']['Nice - Left']
+        if side == 'r':
+            return this.gameEventsDict['Type Of Contact']['Nice - Right']
+        
+    def perfectContactTypeEvents(this):
+         return this.gameEventsDict['Type Of Contact']['Perfect']
+
+    def sourContactTypeEvents(this, side='b'):
+        if side == 'b':
+            return this.gameEventsDict['Type Of Contact']['Sour - Left'] | this.gameEventsDict['Type Of Contact']['Sour - Right']
+        if side == 'l':
+            return this.gameEventsDict['Type Of Contact']['Sour - Left']
+        if side == 'r':
+            return this.gameEventsDict['Type Of Contact']['Sour - Right']
+
+    def inputDirectionEvents(this, input_directions):
+        return this.gameEventsDict['Input Direction'][input_directions]
+
+    def contactFrameEvents(this, contactFrame):
+        # returns a set of contacts that occurered on the specified frame
+        # negative inputs return all events with a strike count greater than or equal to the input
+        # inputting a list or set will return the all events that match the numbers in the list
+        contactFrameList = contactFrame if isinstance(contactFrame, (list, set)) else [contactFrame]
+        return this.listInputHandling(contactFrameList, 'Contact Frame')
 
     def characterAtBatEvents(this, char_id):
         # returns a set of events where the input character was at bat
@@ -1324,6 +1540,15 @@ class StatObj:
     def rbiOfEvent(this, eventNum):
         # returns the rbi from a specified event
         return this.eventByNum(eventNum)['RBI']
+    
+    def scoreOfEvent(this, eventNum, teamNum: int):
+        this.__errorCheck_teamNum(teamNum)
+        if teamNum == 0:
+            return this.eventByNum(eventNum)['Away Score']
+        else: return this.eventByNum(eventNum)['Home Score']
+
+    def batterOfEvent(this, eventNum):
+        return this.characterName(this.halfInningOfEvent(eventNum), this.eventByNum(eventNum)['Batter Roster Loc'])
 
     # manual exception handling stuff
     def __errorCheck_teamNum(this, teamNum: int):
