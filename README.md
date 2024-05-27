@@ -56,7 +56,7 @@ Examples:
 - ***-slidingCatch***
 - ***-wallJump***
 - ***-manualSelect***
-- ***-walkoff***'
+- ***-walkoff***
 
 # Example
 `EventLookup.py --batter birdo --pitcher walu --inning 4 5`
