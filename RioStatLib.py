@@ -201,7 +201,9 @@ class StatObj:
                     8: set(),
                     9: set(),
                     10: set()
-                }
+                },
+                'Ball Position - Strikezone': {},
+                'Ball Contact Pos - X': {}
             }
 
             characterEvents = {}
@@ -266,15 +268,32 @@ class StatObj:
                 if event['Pitch']['Star Pitch'] == 1:
                     gameEvents['Star Pitch'].add(eventNum)
 
+                # Banded at two decimal places
+                rounded_strikezone_x_pos = round(event['Pitch']['Ball Position - Strikezone'], 2)
+
+                if rounded_strikezone_x_pos not in gameEvents['Ball Position - Strikezone']:
+                    gameEvents['Ball Position - Strikezone'][rounded_strikezone_x_pos] = set()
+
+                gameEvents['Ball Position - Strikezone'][rounded_strikezone_x_pos].add(eventNum)
+
                 if 'Contact' not in event['Pitch'].keys():
                     continue
 
                 gameEvents['Type Of Contact'][event['Pitch']['Contact']['Type of Contact']].add(eventNum)
                 gameEvents['Input Direction'][event['Pitch']['Contact']['Input Direction - Stick']].add(eventNum)
                 gameEvents['Contact Frame'][int(event['Pitch']['Contact']['Frame of Swing Upon Contact'])].add(eventNum)
+        
 
                 if event['Pitch']['Contact']["Star Swing Five-Star"] == 1:
                     gameEvents['Five Star Dinger'].add(eventNum)
+
+                # Banded at two decimal places
+                rounded_strikezone_x_pos = round(event['Pitch']['Contact']["Ball Contact Pos - X"], 2)
+
+                if rounded_strikezone_x_pos not in gameEvents['Ball Contact Pos - X']:
+                    gameEvents['Ball Contact Pos - X'][rounded_strikezone_x_pos] = set()
+
+                gameEvents['Ball Contact Pos - X'][rounded_strikezone_x_pos].add(eventNum)
 
                 if 'First Fielder' not in event['Pitch']['Contact'].keys():
                     continue
@@ -1426,7 +1445,7 @@ class StatObj:
             elif swing.lower() == 'bunt':
                 result = result.union(this.buntSwingTypeEvents())
             else:
-                raise Exception(f'{swing} is not a valid pitch type. None, Slap, Charge, Star, and Bunt are accepted.')
+                raise Exception(f'{swing} is not a valid swing type. None, Slap, Charge, Star, and Bunt are accepted.')
         
         return result
     
@@ -1448,6 +1467,22 @@ class StatObj:
             return this.gameEventsDict['Type Of Contact']['Sour - Left']
         if side == 'r':
             return this.gameEventsDict['Type Of Contact']['Sour - Right']
+
+    def contactTypeEvents(this, contactType):
+        contactTypeList = contactType if isinstance(contactType, (list, set)) else [contactType]
+        
+        result = set()
+        for contact in contactTypeList:
+            if contact.lower() == 'sour':
+                result = result.union(this.sourContactTypeEvents())
+            elif contact.lower() == 'nice':
+                result = result.union(this.niceContactTypeEvents())
+            elif contact.lower() == 'perfect':
+                result = result.union(this.perfectContactTypeEvents())
+            else:
+                raise Exception(f'{contact} is not a valid contact type. Sour, Nice, and Perfect are accepted.')
+        
+        return result
 
     def inputDirectionEvents(this, input_directions):
         return this.gameEventsDict['Input Direction'][input_directions]
@@ -1510,6 +1545,20 @@ class StatObj:
             return this.halfInningEvents(0)
         else:
             return set()
+        
+    def ballPositionStrikezoneEvents(this, minimimum_ball_pos):
+        result = set()
+        for key in this.gameEventsDict['Ball Position - Strikezone']:
+            if abs(key) >= abs(minimimum_ball_pos):
+                result = result.union(set(this.gameEventsDict['Ball Position - Strikezone'][key]))
+        return result
+    
+    def ballContactPositionEvents(this, minimimum_ball_pos):
+        result = set()
+        for key in this.gameEventsDict['Ball Contact Pos - X']:
+            if abs(key) >= abs(minimimum_ball_pos):
+                result = result.union(set(this.gameEventsDict['Ball Contact Pos - X'][key]))
+        return result
 
     def inningOfEvent(this, eventNum):
         # returns the ininng from a specified event
