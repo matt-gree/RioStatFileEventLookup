@@ -15,9 +15,9 @@ for i, sublist in enumerate(char_name_list):
         charNameDict[name] = i
 
 def userInputToCharacter(userInput):
-    if userInput not in charNameDict.keys():
+    if userInput.lower() not in charNameDict.keys():
         raise Exception(f'{userInput} is an invalid character name')
-    return RioStatsConverter.char_id(charNameDict[userInput])
+    return RioStatsConverter.char_id(charNameDict[userInput.lower()])
 
 
 if __name__ == '__main__':
