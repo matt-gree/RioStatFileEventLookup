@@ -178,7 +178,7 @@ def main():
                 for event in matchingEvents:
                     print(f'{myStats.player(0)} at {myStats.player(1)} {myStats.statJson["Video Published"]}\n'
                             f'Batter: {myStats.batterOfEvent(event)}\n'
-                            f'{convert(myStats.halfInningOfEvent(event))} {myStats.inningOfEvent(event)}   {myStats.outsOfEvent(event)} Out(s)   {myStats.ballsOfEvent(event)}-{myStats.strikesOfEvent(event)}\n'
+                            f'{convert(myStats.halfInningOfEvent(event))} {myStats.inningOfEvent(event)}, {myStats.outsOfEvent(event)} Out(s), {myStats.ballsOfEvent(event)} Ball(s), {myStats.strikesOfEvent(event)} Strike(s)\n'
                             f'{event_summary}\n')
 if __name__ == "__main__":
     main() 
