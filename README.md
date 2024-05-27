@@ -2,7 +2,7 @@
  Looks up events in ProjectRio stat files based on parameter inputs.
 
 # Usage
-The program makes use of both parameters followed by an argument as well as flags, which simply denote a characterisitic of the play. Use the config flie to set the path to the folder contianing the stat files you wish to look through. By default, the script contains a directory of stat files from games recorded on the MattGree youtube channel. This allows the user to find clips of events they are searching for.
+The program makes use of both parameters followed by an argument as well as flags, which simply denote a characterisitic of the play. Use the config flie to set the path to the folder contianing the stat files you wish to look through. By default, the script contains a directory of stat files from games recorded on the MattGree youtube channel. This allows the user to find clips of events they are searching for. **Note**: Only works with project Rio 1.9.6 stat files and later (~ April 2023)
 
 # Parameters
 - ***-firstFielderPos***: Position in the field of the character who first picks up the ball during the event. Accepted postions: P, C, 1B, 2B, 3B, SS, LF, CF, RF.
