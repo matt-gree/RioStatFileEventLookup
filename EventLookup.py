@@ -1,9 +1,11 @@
-import RioStatLib
 import json
 import os
 import argparse
-import CharacterInputHandling as CHI
 from functools import partial
+
+from project_rio_lib.stat_file_parser import StatObj, EventObj
+from event_search_class import EventSearch
+import CharacterInputHandling as CHI
 
 event_parameters = ['Bunt',
                 'Sac Fly',
@@ -103,58 +105,59 @@ def main():
         if (os.path.isfile(stat_file)) & (filename != ".DS_Store") & ('decoded' in filename):
             with open(stat_file, "r") as stats:
                 jsonObj = json.load(stats)
-                myStats = RioStatLib.StatObj(jsonObj)
+                game_stats = StatObj(jsonObj)
+                events_search = EventSearch(game_stats)
 
                 event_flags = {
-                    'bunt': myStats.buntResultEvents,
-                    'sacFly':  myStats.sacFlyResultEvents,
-                    'strikeout': myStats.strikeoutResultEvents,
-                    'groundBallDP': myStats.groundBallDoublePlayResultEvents,
-                    'errorChem': myStats.chemErrorResultEvents,
-                    'errorInput': myStats.inputErrorResultEvents,
-                    'walk': myStats.walkResultEvents,
-                    'walkHBP': partial(myStats.walkResultEvents, include_bb=False),
-                    'walkBB': partial(myStats.walkResultEvents, include_hbp=False),
-                    'hit': myStats.hitResultEvents,
-                    'single': partial(myStats.hitResultEvents, numberOfBases=1),
-                    'double': partial(myStats.hitResultEvents, numberOfBases=2),
-                    'triple': partial(myStats.hitResultEvents, numberOfBases=3),
-                    'hr': partial(myStats.hitResultEvents, numberOfBases=4),
-                    'steal': myStats.stealEvents,
-                    'starPitch': myStats.starPitchEvents,
-                    'bobble': myStats.bobbleEvents,
-                    'fiveStarDinger': myStats.fiveStarDingerEvents,
-                    'slidingCatch': myStats.slidingCatchEvents,
-                    'wallJump': myStats.wallJumpEvents,
-                    'manualSelect': myStats.manualCharacterSelectionEvents,
-                    'walkoff': myStats.walkoffEvents,
-                    'caught': myStats.caughtResultEvents,
-                    'caughtLineDrive': myStats.caughtLineDriveResultsEvents,
-                    'out': myStats.outResultEvents
+                    'bunt': events_search.buntResultEvents,
+                    'sacFly':  events_search.sacFlyResultEvents,
+                    'strikeout': events_search.strikeoutResultEvents,
+                    'groundBallDP': events_search.groundBallDoublePlayResultEvents,
+                    'errorChem': events_search.chemErrorResultEvents,
+                    'errorInput': events_search.inputErrorResultEvents,
+                    'walk': events_search.walkResultEvents,
+                    'walkHBP': partial(events_search.walkResultEvents, include_bb=False),
+                    'walkBB': partial(events_search.walkResultEvents, include_hbp=False),
+                    'hit': events_search.hitResultEvents,
+                    'single': partial(events_search.hitResultEvents, numberOfBases=1),
+                    'double': partial(events_search.hitResultEvents, numberOfBases=2),
+                    'triple': partial(events_search.hitResultEvents, numberOfBases=3),
+                    'hr': partial(events_search.hitResultEvents, numberOfBases=4),
+                    'steal': events_search.stealEvents,
+                    'starPitch': events_search.starPitchEvents,
+                    'bobble': events_search.bobbleEvents,
+                    'fiveStarDinger': events_search.fiveStarDingerEvents,
+                    'slidingCatch': events_search.slidingCatchEvents,
+                    'wallJump': events_search.wallJumpEvents,
+                    'manualSelect': events_search.manualCharacterSelectionEvents,
+                    'walkoff': events_search.walkoffEvents,
+                    'caught': events_search.caughtResultEvents,
+                    'caughtLineDrive': events_search.caughtLineDriveResultsEvents,
+                    'out': events_search.outResultEvents
                     }
                 event_parameters = {
-                    'firstFielderPos': myStats.positionFieldingEvents,
-                    'batter': myStats.characterAtBatEvents,
-                    'pitcher': myStats.characterPitchingEvents,
-                    'fielder': myStats.characterFieldingEvents,
-                    'inning': myStats.inningEvents,
-                    'halfInning': myStats.halfInningEvents,
-                    'runnersOnBase': myStats.runnerOnBaseEvents,
-                    'outsInInning': myStats.outsInInningEvents,
-                    'balls': myStats.ballEvents,
-                    'strikes': myStats.strikeEvents,
-                    'chemOnBase': myStats.chemOnBaseEvents,
-                    'rbi': myStats.rbiEvents,
-                    'battingPlayer': myStats.playerBattingEvents,
-                    'pitchingPlayer': myStats.playerPitchingEvents,
-                    'swingType': myStats.swingTypeEvents,
-                    'ballStrikezonePos': myStats.ballPositionStrikezoneEvents,
-                    'ballContactPos': myStats.ballContactPositionEvents,
-                    'frame': myStats.contactFrameEvents,
-                    'contactType': myStats.contactTypeEvents
+                    'firstFielderPos': events_search.positionFieldingEvents,
+                    'batter': events_search.characterAtBatEvents,
+                    'pitcher': events_search.characterPitchingEvents,
+                    'fielder': events_search.characterFieldingEvents,
+                    'inning': events_search.inningEvents,
+                    'halfInning': events_search.halfInningEvents,
+                    'runnersOnBase': events_search.runnerOnBaseEvents,
+                    'outsInInning': events_search.outsInInningEvents,
+                    'balls': events_search.ballEvents,
+                    'strikes': events_search.strikeEvents,
+                    'chemOnBase': events_search.chemOnBaseEvents,
+                    'rbi': events_search.rbiEvents,
+                    'battingPlayer': events_search.playerBattingEvents,
+                    'pitchingPlayer': events_search.playerPitchingEvents,
+                    'swingType': events_search.swingTypeEvents,
+                    'ballStrikezonePos': events_search.ballPositionStrikezoneEvents,
+                    'ballContactPos': events_search.ballContactPositionEvents,
+                    'frame': events_search.contactFrameEvents,
+                    'contactType': events_search.contactTypeEvents
                     }
                 
-                matchingEvents = set(range(myStats.eventFinal()+1))
+                matchingEvents = set(range(game_stats.final_event()+1))
                 event_summary = []
                 for arg, input in args.__dict__.items():
                     if input is (False or None):
@@ -176,9 +179,11 @@ def main():
 
                 convert = lambda x: 'Top' if x == 0 else 'Bot'
                 for event in matchingEvents:
-                    print(f'{myStats.player(0)} at {myStats.player(1)} {myStats.statJson["Video Published"]}\n'
-                            f'Batter: {myStats.batterOfEvent(event)}\n'
-                            f'{convert(myStats.halfInningOfEvent(event))} {myStats.inningOfEvent(event)}, {myStats.outsOfEvent(event)} Out(s), {myStats.ballsOfEvent(event)} Ball(s), {myStats.strikesOfEvent(event)} Strike(s)\n'
+                    event_obj = EventObj(game_stats, event)
+                    print(f'{game_stats.player(0)} at {game_stats.player(1)} {game_stats.statJson["Video Published"]}\n'
+                            f'Batter: {event_obj.batter()}\n'
+                            f'{convert(event_obj.half_inning())} {event_obj.inning()}, {event_obj.outs()} Out(s), {event_obj.balls()} Ball(s), {event_obj.strikes()} Strike(s)\n'
                             f'{event_summary}\n')
+                    
 if __name__ == "__main__":
-    main() 
+    main()
